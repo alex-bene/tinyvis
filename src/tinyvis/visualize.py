@@ -19,7 +19,7 @@ def trimesh_to_plotly_mesh(
         mesh (trimesh.Trimesh): The trimesh object to visualize.
         color (str | None): Optional color to apply to the mesh and override any texture.
         opacity (float): Opacity of the mesh.
-        flatshading (bool): Whether to use flat shading for the mesh.
+        flatshading (bool): Whether to use flat shading for the mesh. Is overridden if opacity < 1. Defaults to False.
 
     Returns:
         go.Mesh3d: A Plotly Mesh3d trace representing the trimesh object.
@@ -46,7 +46,7 @@ def trimesh_to_plotly_mesh(
         "i": faces[:, 0],
         "j": faces[:, 1],
         "k": faces[:, 2],
-        "flatshading": flatshading,
+        "flatshading": flatshading or opacity < 1.0,
         "lighting": {"ambient": 0.5, "diffuse": 0.5, "specular": 0.5},
         "opacity": opacity,
     }

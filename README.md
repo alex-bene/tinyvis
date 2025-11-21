@@ -137,6 +137,10 @@ This project uses [Ruff](https://github.com/astral-sh/ruff) for linting and form
 - **GitHub Actions**: Runs on every push to **auto-fix** issues on all branches.
 - **pre-commit.ci**: Runs on every push to **check** code quality (fixes are handled by the GitHub Action).
 
+## TODO
+- [ ] Support pytorch3d Meshes/Pointclouds & `trimesh.PointCloud` as input to `visualize`
+- [ ] Support pytorch3d `CameraBase` as input to `visualize`
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
