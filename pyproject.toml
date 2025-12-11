@@ -20,6 +20,9 @@ dependencies = [
     "pyrender>=0.1.45",
 ]
 
+[tool.uv]
+override-dependencies = ["PyOpenGL>=3.1.9"] # force upgrade for pyrender
+
 [tool.uv.sources]
 tinytools = { git = "https://github.com/alex-bene/tinytools.git" }
 
