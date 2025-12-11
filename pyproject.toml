@@ -12,7 +12,16 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">=3.10,<3.12"
-dependencies = ["plotly>=6.5.0", "trimesh>=4.9.0", "matplotlib>=3.10.7"]
+dependencies = [
+    "plotly>=6.5.0",
+    "trimesh>=4.9.0",
+    "matplotlib>=3.10.7",
+    "tinytools",
+    "pyrender>=0.1.45",
+]
+
+[tool.uv.sources]
+tinytools = { git = "https://github.com/alex-bene/tinytools.git" }
 
 [dependency-groups]
 dev = ["notebook>=7.3.2", "ruff>=0.13.3", "pre-commit>=3.7.1"]
