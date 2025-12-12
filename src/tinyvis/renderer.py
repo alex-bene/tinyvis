@@ -79,7 +79,7 @@ class PyRenderer:
 
         self.image_size = image_size
         self.set_scene(bg_color, ambient_light)
-        camera_params = {"translation": [0.0, 0.0, 1.0], "rotation": np.eye(3), "focal_length": 600} | (
+        camera_params = {"translation": [0.0, 0.0, 0.0], "rotation": np.eye(3), "focal_length": 600} | (
             camera_params or {}
         )
         self.set_camera(**camera_params)
@@ -109,16 +109,17 @@ class PyRenderer:
         self,
         translation: tuple[float, float, float] | None = None,
         rotation: np.ndarray | None = None,
-        focal_length: int = 600,
+        focal_length: int | None = None,
     ) -> None:
         """Set up the camera for rendering.
 
         Args:
-            translation (tuple[float, float, float] | None, optional): The camera translation. If None, defaults to
-                (0, 0, 1). Defaults to None.
-            rotation (np.ndarray | None, optional): The camera rotation matrix. If None, defaults to np.eye(3).
-                Defaults to None.
-            focal_length (int, optional): The camera focal length in pixels. Defaults to 600.
+            translation (tuple[float, float, float] | None, optional): The camera translation. If None, it's ignored
+                if camera is set and defaults to (0, 0, 0) if camera is not set. Defaults to None.
+            rotation (np.ndarray | None, optional): The camera rotation matrix. If None, it's ignored if camera is set
+                and defaults to np.eye(3) if camera is not set. Defaults to None.
+            focal_length (int | None, optional): The camera focal length in pixels. If None and camera is not set,
+                defaults to the maximum image dimension in pixels. Defaults to None.
 
         Raises:
             AttributeError: If the scene has not been set up before setting the camera.
@@ -128,13 +129,26 @@ class PyRenderer:
             msg = "Scene must be set before setting the camera"
             raise AttributeError(msg)
 
+        if hasattr(self, "_camera_node"):
+            if focal_length is not None:
+                self.camera_focal_length = focal_length
+            if translation is not None:
+                self.camera_translation = translation
+            if rotation is not None:
+                self.camera_rotation = rotation
+            return
+
+        if focal_length is None:
+            focal_length = max(self.camera_center[0], self.camera_center[1]) * 2
         camera = pyrender.camera.IntrinsicsCamera(
             fx=focal_length, fy=focal_length, cx=self.camera_center[0], cy=self.camera_center[1]
         )
+
         camera_pose = np.eye(4)
         if rotation is not None:
             camera_pose[:3, :3] = rotation
-        camera_pose[:3, 3] = translation if translation is not None else (0.0, 0.0, 1.0)
+        if translation is not None:
+            camera_pose[:3, 3] = translation
         self._camera_node = self.scene.add(camera, pose=camera_pose)
 
     @property
@@ -174,15 +188,37 @@ class PyRenderer:
         return self.scene.bg_color
 
     @background_color.setter
-    def background_color(self, color: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)) -> None:
+    def background_color(self, color: tuple[float, float, float, float] | None) -> None:
         """Set the background color of the scene.
 
         Args:
-            color (tuple[float, float, float, float], optional): The background color (RGBA).
-                Defaults to (1.0, 1.0, 1.0, 1.0).
+            color (tuple[float, float, float, float], optional): The background color (RGBA). If None, does nothing.
 
         """
-        self.scene.bg_color = color
+        if color is not None:
+            self.scene.bg_color = color
+
+    @property
+    def camera_focal_length(self) -> float:
+        """Get the camera focal length.
+
+        Returns:
+            float: The camera focal length in pixels.
+
+        """
+        return self._camera_node.camera.fx
+
+    @camera_focal_length.setter
+    def camera_focal_length(self, focal_length: float | None) -> None:
+        """Set the camera focal length.
+
+        Args:
+            focal_length (float): The camera focal length in pixels. If None, does nothing.
+
+        """
+        if focal_length is not None:
+            self._camera_node.camera.fx = focal_length
+            self._camera_node.camera.fy = focal_length
 
     @property
     def camera_translation(self) -> tuple[float, float, float]:
@@ -195,14 +231,15 @@ class PyRenderer:
         return self._camera_node.translation
 
     @camera_translation.setter
-    def camera_translation(self, translation: tuple[float, float, float] = (0.0, 0.0, 1.0)) -> None:
+    def camera_translation(self, translation: tuple[float, float, float] | None) -> None:
         """Set the camera translation.
 
         Args:
-            translation (tuple[float, float, float], optional): The camera translation. Defaults to (0.0, 0.0, 1.0).
+            translation (tuple[float, float, float], optional): The camera translation. If None, does nothing.
 
         """
-        self._camera_node.translation = translation
+        if translation is not None:
+            self._camera_node.translation = translation
 
     @property
     def camera_rotation(self) -> np.ndarray:
@@ -215,15 +252,15 @@ class PyRenderer:
         return self._camera_node.rotation
 
     @camera_rotation.setter
-    def camera_rotation(self, rotation: np.ndarray | None = None) -> None:
+    def camera_rotation(self, rotation: np.ndarray | None) -> None:
         """Set the camera rotation.
 
         Args:
-            rotation (np.ndarray, optional): The camera rotation matrix. If None, defaults to np.eye(3).
-                Defaults to None.
+            rotation (np.ndarray, optional): The camera rotation matrix. If None, does nothing.
 
         """
-        self._camera_node.rotation = rotation if rotation is not None else np.array([0, 0, 0, 1.0])
+        if rotation is not None:
+            self._camera_node.rotation = rotation
 
     @property
     def camera_pose(self) -> np.ndarray:
@@ -292,6 +329,7 @@ class PyRenderer:
         view: str = "front",
         material: pyrender.MetallicRoughnessMaterial | None = None,
         *,
+        camera_focal_length: float | None = None,
         skip_clear_scene: bool = False,
     ) -> tuple[Image.Image, np.ndarray]:
         """Render the meshes.
@@ -307,6 +345,7 @@ class PyRenderer:
                 Defaults to "front".
             material (pyrender.MetallicRoughnessMaterial | None, optional): The material to for the meshes.
                 Defaults to None.
+            camera_focal_length (float | None, optional): The camera focal length. Defaults to None.
             skip_clear_scene (bool, optional): Whether to skip clearing the scene before rendering the meshes.
                 Defaults to False.
 
@@ -319,6 +358,9 @@ class PyRenderer:
         """
         prev_bg_color = self.background_color
         self.background_color = bg_color
+
+        if camera_focal_length is not None:
+            self.camera_focal_length = camera_focal_length
 
         # Set rotation angle and direction based on view
         if view not in ["front", "back", "left", "right", "top", "bottom"]:
@@ -454,9 +496,7 @@ class PyRenderer:
 
         """
         if camera_focal_length is not None:
-            self._camera_node.camera = pyrender.camera.IntrinsicsCamera(
-                fx=camera_focal_length, fy=camera_focal_length, cx=self.camera_center[0], cy=self.camera_center[1]
-            )
+            self.camera_focal_length = camera_focal_length
 
         floor_node = self.get_floor_node(length=15.0, width=15.0, height=0.0, floor_color=floor_color)
 
@@ -555,7 +595,14 @@ class PyRenderer:
         """
         if not is_sequence:
             return self.render_image(
-                meshes, render_params, meshes_colors, bg_color, view, material, skip_clear_scene=skip_clear_scene
+                meshes,
+                render_params,
+                meshes_colors,
+                bg_color,
+                view,
+                material,
+                camera_focal_length=camera_focal_length,
+                skip_clear_scene=skip_clear_scene,
             )
         return self.render_sequence(
             meshes,
