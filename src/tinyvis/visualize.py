@@ -13,8 +13,11 @@ def visualize(
     meshes: list[trimesh.Trimesh] | None = None,
     meshes_colors: list[str | None] | None = None,
     meshes_opacities: list[float] | None = None,
+    meshes_names: list[str] | None = None,
     pointclouds: list[np.ndarray] | None = None,
     pointclouds_colors: list[Image.Image | np.ndarray | str | None] | None = None,
+    pointclouds_names: list[str] | None = None,
+    pointclouds_sizes: list[float | None] | None = None,
     points: np.ndarray | None = None,
     points_colors: list[str | None] | None = None,
     points_names: list[str] | None = None,
@@ -38,16 +41,22 @@ def visualize(
     )
 
     if pointclouds is not None:
+        pointclouds_names = pointclouds_names or [None] * len(pointclouds)
+        pointclouds_sizes = pointclouds_sizes or [None] * len(pointclouds)
         pointclouds_colors = pointclouds_colors or [None] * len(pointclouds)
-        for pointcloud, pointcloud_color in zip(pointclouds, pointclouds_colors, strict=True):
-            fig.add_trace(pointcloud_to_plotly_scatter(pointcloud, pointcloud_color))
+        for pointcloud, pointcloud_color, pointcloud_name, pointcloud_size in zip(
+            pointclouds, pointclouds_colors, pointclouds_names, pointclouds_sizes, strict=True
+        ):
+            fig.add_trace(pointcloud_to_plotly_scatter(pointcloud, pointcloud_color, pointcloud_size, pointcloud_name))
 
     if meshes is not None:
+        meshes_names = meshes_names or [None] * len(meshes)
         meshes_colors = meshes_colors or [None] * len(meshes)
         meshes_opacities = meshes_opacities or [1.0] * len(meshes)
-        for mesh, mesh_color, mesh_opacity in zip(meshes, meshes_colors, meshes_opacities, strict=True):
-            human_mesh_trace = trimesh_to_plotly_mesh(mesh, mesh_color, mesh_opacity)
-            fig.add_trace(human_mesh_trace)
+        for mesh, mesh_color, mesh_opacity, mesh_name in zip(
+            meshes, meshes_colors, meshes_opacities, meshes_names, strict=True
+        ):
+            fig.add_trace(trimesh_to_plotly_mesh(mesh, mesh_color, mesh_opacity, name=mesh_name))
 
     if points is not None:
         if points_names is None:
