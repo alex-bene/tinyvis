@@ -3,20 +3,16 @@
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
-from PIL import Image
 from plotly import graph_objects as go
 
-try:
-    import torch  # pyright: ignore[reportMissingImports]
-except ImportError:
-    torch = None
+from .common import ColorInput, to_numpy_colors
 
 if TYPE_CHECKING:
+    import torch  # pyright: ignore[reportMissingImports]
     from pytorch3d.structures import Pointclouds  # pyright: ignore[reportMissingImports]
     from trimesh.points import PointCloud  # pyright: ignore[reportMissingImports]
 
 PointcloudInput = Union["torch.Tensor", np.ndarray, "Pointclouds", "PointCloud"]
-PointcloudColorInput = Union[Image.Image, np.ndarray, "torch.Tensor", str, None]
 
 __all__ = ["pointcloud_to_plotly_scatter"]
 
@@ -37,33 +33,14 @@ def to_numpy_pointcloud(points: PointcloudInput) -> tuple[np.ndarray, np.ndarray
     elif hasattr(points, "vertices"):
         points = points.vertices
         colors = points.colors if hasattr(points, "colors") else None
-    elif torch is not None and isinstance(points, torch.Tensor):
+    elif hasattr(points, "detach"):
         points = points.detach().cpu().numpy()
     return points, colors
 
 
-def to_numpy_colors(colors: PointcloudColorInput) -> np.ndarray | str | None:
-    """Convert various color representations to numpy array or string.
-
-    Args:
-        colors (torch.Tensor | np.ndarray | PIL.Image | str | None): Input colors
-
-    Returns:
-        np.ndarray | str | None: Numpy array of colors or string
-
-    """
-    if colors is None or isinstance(colors, str):
-        return colors
-    if isinstance(colors, Image.Image):
-        return np.array(colors)
-    if torch is not None and isinstance(colors, torch.Tensor):
-        colors = colors.detach().cpu().numpy()
-    return colors
-
-
 def pointcloud_to_plotly_scatter(
     points: PointcloudInput,
-    colors: PointcloudColorInput = None,
+    colors: ColorInput = None,
     marker_size: float = 1.0,
     name: str | None = None,
     showlegend: bool = True,

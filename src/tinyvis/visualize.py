@@ -5,6 +5,7 @@ import trimesh
 from PIL import Image
 from plotly import graph_objects as go
 
+from .cameras import camera_to_plotly_scatter
 from .meshes import trimesh_to_plotly_mesh
 from .pointclouds import pointcloud_to_plotly_scatter
 
@@ -22,6 +23,10 @@ def visualize(
     points_colors: list[str | None] | None = None,
     points_names: list[str] | None = None,
     points_sizes: list[float | None] | None = None,
+    cameras: list[np.ndarray] | None = None,
+    cameras_colors: list[str | None] | None = None,
+    cameras_names: list[str] | None = None,
+    cameras_sizes: list[float | None] | None = None,
     figure_height: int = 800,
 ) -> go.Figure:
     """Visualize a list of trimesh.Trimesh objects and an array of points in an interactive Plotly 3D viewer."""
@@ -77,6 +82,19 @@ def visualize(
                     marker={"size": point_size, "color": point_color},
                     showlegend=True,
                     name=point_name,
+                )
+            )
+
+    if cameras is not None:
+        cameras_names = cameras_names or [None] * len(cameras)
+        cameras_colors = cameras_colors or [None] * len(cameras)
+        cameras_sizes = cameras_sizes or [0.1] * len(cameras)
+        for camera, camera_name, camera_color, camera_size in zip(
+            cameras, cameras_names, cameras_colors, cameras_sizes, strict=True
+        ):
+            fig.add_trace(
+                camera_to_plotly_scatter(
+                    camera, color=camera_color, name=camera_name, camera_scale=camera_size, marker_size=1.0
                 )
             )
 
