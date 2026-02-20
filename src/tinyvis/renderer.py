@@ -383,8 +383,12 @@ class PyRenderer:
                 continue
             rtd_mesh = mesh
             if view != "front":
+                centroid = mesh.centroid
+                to_origin = transformations.translation_matrix(-centroid)
                 rot = transformations.rotation_matrix(np.radians(rotation_angle), rotation_direction)
-                rtd_mesh = mesh.copy().apply_transform(rot)
+                from_origin = transformations.translation_matrix(centroid)
+                transform = transformations.concatenate_matrices(from_origin, rot, to_origin)
+                rtd_mesh = mesh.copy().apply_transform(transform)
             node_id = self.scene.add(
                 pyrender.Mesh.from_trimesh(rtd_mesh, smooth=mesh.visual.kind != "face", material=material), f"mesh_{i}"
             )
